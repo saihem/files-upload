@@ -18,9 +18,14 @@
 <a href="{% url "core:home" %}">Home</a>
 <a href="{% url "core:login" %}">Sign In to View Your Files</a>
 {% block content %}
+  <h3>Upload a file below to Oracle Object Storage! A User ID will be generated, allowing you to access the file.</h3>
+{% endblock %}
+{% block upload-file %}
+  <h3>Upload File</h3>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="file" name="myfile">
+    {{ form }}
     <button type="submit">Upload</button>
   </form>
 {% endblock %}

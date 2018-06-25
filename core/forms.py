@@ -1,14 +1,13 @@
 from django import forms
-from .models import File, User
+from .models import File, Owner
 
 
 class FileForm(forms.ModelForm):
-    class Meta:
-        model = File
-        fields = ('name', 'owner',)
+    file_field = forms.FileField(
+        widget=forms.ClearableFileInput(attrs={'multiple': True}))
 
 
-class UserForm(forms.ModelForm):
+class OwnerForm(forms.ModelForm):
     class Meta:
-        model = User
+        model = Owner
         fields = ('login_id',)
