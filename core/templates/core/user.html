@@ -1,7 +1,28 @@
 {% extends 'core/home.html' %}
+{% load static %}
+
 {% block content %}
 Here are a list of your files.
+  <table class="table nice table-bordered table-condensed table-striped">
+  <thead>
+    <th>File Name</th>
+    <th>Date Uploaded</th>
+    <th>Download</th>
+  </thead>
+    <tbody>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tbody>
+  </table>
 {% endblock %}
 
+
 {% block upload-file %}
+  <form id="file-form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="myfile">
+    {{ form }}
+    <button type="submit">Upload</button>
+  </form>
 {% endblock %}

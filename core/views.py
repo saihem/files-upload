@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.generic import FormView, RedirectView, TemplateView
 from django.urls import reverse, reverse_lazy
 from django.core.files.storage import FileSystemStorage
@@ -21,6 +22,8 @@ class HomeView(FormView):
 
     def get_context_data(self, **kwargs):
         ctx = {}
+        if self.request.user.is_authenticated or self.request.session['user']:
+            ctx['is_auth']: True
         return ctx
 
     def get_initial(self):
@@ -31,7 +34,11 @@ class HomeView(FormView):
         if not self.request.FILES:
             return self.form_invalid(form)
         if not self.request.user.is_authenticated:
-            self.request.user = Owner.objects.create(login_id=uuid.uuid1()) #make uuid based on host ID and current time
+            self.request.user, _ = Owner.objects.get_or_create(
+                login_id=uuid.uuid1())  # make uuid based on host ID and current time
+            self.request.user.is_authenticated = True
+            self.request.user.save()
+            self.request.session['user'] = self.request.user
         file = self.request.FILES['myfile']
         file_name = file.name
         fs = FileSystemStorage()
@@ -48,10 +55,10 @@ class HomeView(FormView):
             'file': file_name,
             'user_id': self.request.user.login_id,
         })
-        return JsonResponse({
-            'status': 'ok',
-            'data': data,
-        })
+        return render(self.request, self.template_name, {'success': {
+            'file': file_name,
+            'user_id': self.request.user.login_id,
+        }})
 
     def form_invalid(self, form):
         return super(HomeView, self).form_invalid(form)
@@ -84,5 +91,9 @@ class UserView(TemplateView):
         pass
 
     def get_context_data(self, **kwargs):
+        self.get_files()
         ctx = {}
         return ctx
+
+    def get_files(self):
+        pass
