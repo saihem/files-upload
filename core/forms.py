@@ -15,6 +15,8 @@ class FileForm(JsonFormMixin, forms.ModelForm):
 
 
 class OwnerForm(forms.ModelForm):
+    login_id = forms.CharField()
+
     class Meta:
         model = Owner
         fields = 'login_id',

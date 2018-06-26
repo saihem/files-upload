@@ -1,20 +1,18 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.generic import FormView, RedirectView, TemplateView
-from django.urls import reverse, reverse_lazy
-from django.core.files.storage import FileSystemStorage
-from .models import File, Owner
-from .forms import FileForm, OwnerForm
 import uuid
-import os
-import oci
-from oci.object_storage import UploadManager
-from oci.object_storage.models import CreateBucketDetails
-from oci.object_storage.transfer.constants import MEBIBYTE
+
+from django.core.files.storage import FileSystemStorage
+from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
+from django.views.generic import FormView, TemplateView
+
+from .forms import FileForm, OwnerForm
+from .models import Owner, File
+from .mixins import OracleMixin
 
 
-class HomeView(FormView):
+class HomeView(OracleMixin, FormView):
     template_name = 'core/home.html'
     success_url = reverse_lazy('core:home')
     form_class = FileForm
@@ -22,23 +20,23 @@ class HomeView(FormView):
 
     def get_context_data(self, **kwargs):
         ctx = {}
-        if self.request.user.is_authenticated or self.request.session['user']:
+        if self.request.user.is_authenticated or 'user' in self.request.session:
             ctx['is_auth']: True
         return ctx
-
-    def get_initial(self):
-        owners = Owner.objects.all()
-        return {'owner': owners}
 
     def form_valid(self, form):
         if not self.request.FILES:
             return self.form_invalid(form)
         if not self.request.user.is_authenticated:
-            self.request.user, _ = Owner.objects.get_or_create(
-                login_id=uuid.uuid1())  # make uuid based on host ID and current time
-            self.request.user.is_authenticated = True
-            self.request.user.save()
-            self.request.session['user'] = self.request.user
+            try:
+                self.request.user = Owner.objects.get(
+                    login_id=self.request.session['user'].login_id)
+            except Owner.DoesNotExist:
+                self.request.user = Owner.objects.create(
+                    login_id=uuid.uuid1())  # make uuid based on host ID and current time
+                self.request.user.is_authenticated = True
+                self.request.user.save()
+                self.request.session['user'] = self.request.user
         file = self.request.FILES['myfile']
         file_name = file.name
         fs = FileSystemStorage()
@@ -49,7 +47,9 @@ class HomeView(FormView):
         instance.name = file_name
         instance.owner = self.request.user
         instance.save()
-        self.upload_cloud(uploaded_file_url)
+        response = self.upload_cloud(
+            file_properties=(uploaded_file_url, file_name),
+            user=self.request.user.login_id)
         data = form.cleaned_json
         data.update({
             'file': file_name,
@@ -63,7 +63,7 @@ class HomeView(FormView):
     def form_invalid(self, form):
         return super(HomeView, self).form_invalid(form)
 
-    def upload_cloud(self, file):
+    def create_oci_user(self):
         pass
 
 
@@ -72,28 +72,46 @@ class LoginView(FormView):
     success_url = reverse_lazy('core:user')
     form_class = OwnerForm
 
-    def get_context_data(self, **kwargs):
-        ctx = {}
-        return ctx
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        return super(LoginView, self).dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        form = OwnerForm(request.POST)
+        try:
+            user = Owner.objects.get(login_id=request.POST.get('login_id', ''))
+            self.request.session['user'] = user
+            return self.form_valid(form)
+        except Owner.DoesNotExist:
+            return self.form_invalid(form)
+        return super(LoginView, self).post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        model = form.save(commit=False)
+        instance = form.save(commit=False)
+        instance.user = self.request.session['user'].login_id
+        instance.save()
         return super(LoginView, self).form_valid(form)
 
     def form_invalid(self, form):
         return super(LoginView, self).form_invalid(form)
 
 
-class UserView(TemplateView):
+class UserView(OracleMixin, TemplateView):
     template_name = 'core/user.html'
 
-    def get_form_kwargs(self):
-        pass
-
     def get_context_data(self, **kwargs):
-        self.get_files()
-        ctx = {}
+        files = self.get_files()
+        ctx = {'files': files}
         return ctx
 
     def get_files(self):
-        pass
+        files = []
+        for file in File.objects.filter(
+                user=self.request.session['user']).select_related(
+            'owner'):
+            file_object = self.get_file(
+                user=self.request.session['user'].login_id, file=file.name)
+            files.append({'name': file.name,
+                          'upload': file.updated_at,
+                          'download': file_object, })
+        return files
