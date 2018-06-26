@@ -1,11 +1,13 @@
-from django.contrib.auth.models import User
 from rest_framework import viewsets
+
+from core.models import Owner
 from .serializers import UserSerializer
-from django.views.generic import FormView, RedirectView, TemplateView
+
 
 class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = User.objects.all().order_by('-date_joined')
+
+    queryset = Owner.objects.order_by('-date_joined')
     serializer_class = UserSerializer

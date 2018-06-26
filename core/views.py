@@ -1,7 +1,11 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView
 from django.urls import reverse, reverse_lazy
+from django.core.files.storage import FileSystemStorage
 from .models import File, Owner
 from .forms import FileForm, OwnerForm
+import uuid
 import os
 import oci
 from oci.object_storage import UploadManager
@@ -13,6 +17,7 @@ class HomeView(FormView):
     template_name = 'core/home.html'
     success_url = reverse_lazy('core:home')
     form_class = FileForm
+    uploaded_file_url = None
 
     def get_context_data(self, **kwargs):
         ctx = {}
@@ -22,19 +27,37 @@ class HomeView(FormView):
         owners = Owner.objects.all()
         return {'owner': owners}
 
-    def post(self, request, *args, **kwargs):
-        files = request.FILES.getlist('file_field')
-        return self.form_valid()
-
     def form_valid(self, form):
+        if not self.request.FILES:
+            return self.form_invalid(form)
+        if not self.request.user.is_authenticated:
+            self.request.user = Owner.objects.create(login_id=uuid.uuid1()) #make uuid based on host ID and current time
+        file = self.request.FILES['myfile']
+        file_name = file.name
+        fs = FileSystemStorage()
+        filename = fs.save(file.name, file)
+        uploaded_file_url = fs.url(filename)
         instance = form.save(commit=False)
-        files = self.request.FILES
-        return super(HomeView, self).form_valid(form)
+        instance.file = file
+        instance.name = file_name
+        instance.owner = self.request.user
+        instance.save()
+        self.upload_cloud(uploaded_file_url)
+        data = form.cleaned_json
+        data.update({
+            'file': file_name,
+            'user_id': self.request.user.login_id,
+        })
+        return JsonResponse({
+            'status': 'ok',
+            'data': data,
+        })
 
     def form_invalid(self, form):
-        if not form.data['owner'] or form.data['name']:
-            self.form_valid()
         return super(HomeView, self).form_invalid(form)
+
+    def upload_cloud(self, file):
+        pass
 
 
 class LoginView(FormView):
