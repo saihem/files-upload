@@ -29,9 +29,10 @@ class HomeView(OracleMixin, FormView):
             return self.form_invalid(form)
         if not self.request.user.is_authenticated:
             try:
+                user = self.request.session['user'].login_id
                 self.request.user = Owner.objects.get(
-                    login_id=self.request.session['user'].login_id)
-            except Owner.DoesNotExist:
+                    login_id=user)
+            except (KeyError, Owner.DoesNotExist):
                 self.request.user = Owner.objects.create(
                     login_id=uuid.uuid1())  # make uuid based on host ID and current time
                 self.request.user.is_authenticated = True
@@ -72,28 +73,11 @@ class LoginView(FormView):
     success_url = reverse_lazy('core:user')
     form_class = OwnerForm
 
-    @method_decorator(csrf_protect)
-    def dispatch(self, *args, **kwargs):
-        return super(LoginView, self).dispatch(*args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        form = OwnerForm(request.POST)
-        try:
-            user = Owner.objects.get(login_id=request.POST.get('login_id', ''))
-            self.request.session['user'] = user
-            return self.form_valid(form)
-        except Owner.DoesNotExist:
-            return self.form_invalid(form)
-        return super(LoginView, self).post(request, *args, **kwargs)
-
     def form_valid(self, form):
-        instance = form.save(commit=False)
-        instance.user = self.request.session['user'].login_id
-        instance.save()
+        instance = form.save()
+        if not 'user' in self.request.session:
+            self.request.session['user'] = instance
         return super(LoginView, self).form_valid(form)
-
-    def form_invalid(self, form):
-        return super(LoginView, self).form_invalid(form)
 
 
 class UserView(OracleMixin, TemplateView):
@@ -110,7 +94,8 @@ class UserView(OracleMixin, TemplateView):
                 user=self.request.session['user']).select_related(
             'owner'):
             file_object = self.get_file(
-                user=self.request.session['user'].login_id, file=file.name)
+                user=self.request.session['user'].login_id,
+                file_name=file.name)
             files.append({'name': file.name,
                           'upload': file.updated_at,
                           'download': file_object, })

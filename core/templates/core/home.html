@@ -14,7 +14,7 @@
   <!-- Bootstrap -->
 </head>
 <body>
-<h1>OM SAI RAM</h1>
+{#<h1>OM SAI RAM</h1>#}
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
   <a class="navbar-brand" href="{% url "core:home" %}">Home</a>
   <a class="navbar-brand" href="{% url "core:login" %}">Sign In</a>
@@ -24,14 +24,14 @@
 </nav>
 {% block content %}
   <h3>Upload a file below to Oracle Object Storage! A User ID will be generated, allowing you to access the file.</h3>
-{% endblock %}
-{% block upload-file %}
-  <form id="file-form" method="post" enctype="multipart/form-data">
+   <form id="file-form" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="file" name="myfile">
     {{ form }}
     <button type="submit">Upload</button>
   </form>
+{% endblock %}
+{% block upload-file %}
 {% endblock %}
 {% block success %}
   {% if success %}
