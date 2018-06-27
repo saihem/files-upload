@@ -45,7 +45,8 @@ class OracleMixin:
     bucket_name = 'files_app'
 
     def set_config(self):
-        config = oci.config.from_file()
+        config = oci.config.from_file(file_location=os.path.join(
+            os.path.abspath(os.path.dirname(__name__)), "config.prod"))
         self.compartment_id = config["tenancy"]
         self.object_storage = oci.object_storage.ObjectStorageClient(config)
         self.namespace = self.object_storage.get_namespace().data

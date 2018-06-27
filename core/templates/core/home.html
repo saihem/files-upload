@@ -32,7 +32,7 @@
     </form>
     {% block success %}
     {% if user %}
-      <p>New User <b>{{ user }}</b> has been created{% if file_name %} with uploaded file {{ file_name }}{% endif %}.</p>
+      <p>New User <b>{{ user }}</b> has been created{% if file_name %} with uploaded file <b>{{ file_name }}</b>{% endif %}.</p>
       <p>Use the generated User ID to login <a href="{% url "core:login" %}">here</a> to
       gain access to all files you have uploaded.</p>
     {% endif %}
