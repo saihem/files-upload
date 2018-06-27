@@ -26,12 +26,9 @@
   <h3>Upload a file below to Oracle Object Storage! A User ID will be generated, allowing you to access the file.</h3>
    <form id="file-form" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    <input type="file" name="myfile">
-    {{ form }}
+    {{ form.as_p }}
     <button type="submit">Upload</button>
   </form>
-{% endblock %}
-{% block upload-file %}
 {% endblock %}
 {% block success %}
   {% if success %}

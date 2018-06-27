@@ -1,10 +1,10 @@
 import uuid
+import json
 
 from django.core.files.storage import FileSystemStorage
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
 from django.views.generic import FormView, TemplateView
 
 from .forms import FileForm, OwnerForm
@@ -19,7 +19,7 @@ class HomeView(OracleMixin, FormView):
     uploaded_file_url = None
 
     def get_context_data(self, **kwargs):
-        ctx = {}
+        ctx = super(HomeView, self).get_context_data(**kwargs)
         if self.request.user.is_authenticated or 'user' in self.request.session:
             ctx['is_auth']: True
         return ctx
@@ -38,34 +38,29 @@ class HomeView(OracleMixin, FormView):
                 self.request.user.is_authenticated = True
                 self.request.user.save()
                 self.request.session['user'] = self.request.user
-        file = self.request.FILES['myfile']
-        file_name = file.name
+        instance = form.save(commit=False)
+        file = instance.file
+        instance.name = file.name
+        instance.owner = self.request.user
+        instance.save()
         fs = FileSystemStorage()
         filename = fs.save(file.name, file)
         uploaded_file_url = fs.url(filename)
-        instance = form.save(commit=False)
-        instance.file = file
-        instance.name = file_name
-        instance.owner = self.request.user
-        instance.save()
-        response = self.upload_cloud(
-            file_properties=(uploaded_file_url, file_name),
+        response = self.upload_object(
+            file_properties=(uploaded_file_url, file.name),
             user=self.request.user.login_id)
         data = form.cleaned_json
-        data.update({
-            'file': file_name,
-            'user_id': self.request.user.login_id,
-        })
-        return render(self.request, self.template_name, {'success': {
-            'file': file_name,
-            'user_id': self.request.user.login_id,
+        data.update({'success': {
+            'response': response.status,
+            'file': file.name,
+            'user_id': str(self.request.user.login_id),
         }})
+        return render(self.request, self.template_name, json.dumps(data))
+        # return HttpResponse(json.simplejson.dumps(data),
+        #                     mimetype="application/json")
 
     def form_invalid(self, form):
         return super(HomeView, self).form_invalid(form)
-
-    def create_oci_user(self):
-        pass
 
 
 class LoginView(FormView):
@@ -84,8 +79,8 @@ class UserView(OracleMixin, TemplateView):
     template_name = 'core/user.html'
 
     def get_context_data(self, **kwargs):
-        files = self.get_files()
-        ctx = {'files': files}
+        ctx = super(UserView, self).get_context_data(**kwargs)
+        ctx['files'] = self.get_files()
         return ctx
 
     def get_files(self):
@@ -93,10 +88,10 @@ class UserView(OracleMixin, TemplateView):
         for file in File.objects.filter(
                 user=self.request.session['user']).select_related(
             'owner'):
-            file_object = self.get_file(
-                user=self.request.session['user'].login_id,
+            file_object = self.get_object(
+                user=str(self.request.session['user'].login_id),
                 file_name=file.name)
             files.append({'name': file.name,
                           'upload': file.updated_at,
-                          'download': file_object, })
+                          'download': file_object})
         return files

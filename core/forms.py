@@ -7,11 +7,10 @@ class FileForm(JsonFormMixin, forms.ModelForm):
     file = forms.FileField(
         widget=forms.ClearableFileInput(attrs={'multiple': True}),
         required=False)
-    name = forms.CharField(required=False)
 
     class Meta:
         model = File
-        fields = 'name', 'file',
+        fields = 'file',
 
 
 class OwnerForm(forms.ModelForm):

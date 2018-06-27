@@ -33,11 +33,16 @@ class JsonFormMixin:
 
 
 class OracleMixin:
+    '''
+    Gets Configuration creds
+    create bucket
+    gets object with user and file_name
+    '''
     compartment_id = None
     namespace = None
     object_storage = None
     user = None
-    bucket_name = 'Test_Bucket'
+    bucket_name = 'files_app'
 
     def set_config(self):
         config = oci.config.from_file()
@@ -45,26 +50,29 @@ class OracleMixin:
         self.object_storage = oci.object_storage.ObjectStorageClient(config)
         self.namespace = self.object_storage.get_namespace().data
 
-    def create_bucket(self):
+    def create_bucket(self, new_bucket):
+        self.set_config()
         request = CreateBucketDetails()
         request.compartment_id = self.compartment_id
-        request.name = self.bucket_name
+        request.name = new_bucket
         bucket = self.object_storage.create_bucket(self.namespace, request)
-        request.compartment_id = self.compartment_id
-        request.name = self.bucket_name
-        return self.bucket_name
+        return bucket.data
 
-    def get_file(self, file_name, user):
+    def get_object(self, file_name, user):
         self.user = user
         self.set_config()
         object_name = "{}_{}".format(self.user, file_name)
-        object = self.object_storage.get_object(
-            self.namespace,
-            self.bucket_name,
-            object_name)
+        try:
+            object = self.object_storage.get_object(
+                self.namespace,
+                self.bucket_name,
+                object_name)
+            self.write_to_file(object, self.get_media_file_path(file_name))
+        except:
+            object = None
         return object
 
-    def upload_cloud(self, file_properties, user=None):
+    def upload_object(self, file_properties, user=None):
         self.user = user
         file, file_name = file_properties
         self.set_config()
@@ -73,12 +81,14 @@ class OracleMixin:
         upload_manager = UploadManager(self.object_storage,
                                        allow_parallel_uploads=True,
                                        parallel_process_count=3)
-        file_path = self.get_file_path(file)
+        file_path = self.get_media_file_path(file)
         response = upload_manager.upload_file(
             self.namespace, self.bucket_name, object_name,
             file_path,
             part_size=part_size,
             progress_callback=self.progress_callback)
+        if response == 200:
+            os.remove(file_path)
         return response
 
     @staticmethod
@@ -87,7 +97,15 @@ class OracleMixin:
             bytes_uploaded = 0
         print("{} additional bytes uploaded".format(bytes_uploaded))
 
-    def get_file_path(self, file):
+    @staticmethod
+    def get_media_file_path(file):
         media_os = os.path.join(os.path.abspath(os.path.dirname(__name__)),
                                 settings.MEDIA_ROOT)
         return os.path.join(media_os, os.path.basename(file))
+
+    @staticmethod
+    def write_to_file(object, file_name):
+        with open(file_name, 'wb') as f:
+            for chunk in object.data.raw.stream(1024 * 1024,
+                                                decode_content=False):
+                f.write(chunk)
