@@ -1,9 +1,8 @@
 import uuid
-import json
+import datetime
+import pytz
 
 from django.core.files.storage import FileSystemStorage
-from django.http import HttpResponse
-from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import FormView, TemplateView
 
@@ -21,7 +20,9 @@ class HomeView(OracleMixin, FormView):
     def get_context_data(self, **kwargs):
         ctx = super(HomeView, self).get_context_data(**kwargs)
         if self.request.user.is_authenticated or 'user' in self.request.session:
-            ctx['is_auth']: True
+            ctx['is_auth'] = True
+            ctx['user'] = self.request.session.get('user', None)
+            ctx['file_name'] = self.request.session.get('file_name', None)
         return ctx
 
     def form_valid(self, form):
@@ -29,20 +30,21 @@ class HomeView(OracleMixin, FormView):
             return self.form_invalid(form)
         if not self.request.user.is_authenticated:
             try:
-                user = self.request.session['user'].login_id
+                login_id = self.request.session['user']
                 self.request.user = Owner.objects.get(
-                    login_id=user)
+                    login_id=login_id)
             except (KeyError, Owner.DoesNotExist):
                 self.request.user = Owner.objects.create(
                     login_id=uuid.uuid1())  # make uuid based on host ID and current time
                 self.request.user.is_authenticated = True
                 self.request.user.save()
-                self.request.session['user'] = self.request.user
+                self.request.session['user'] = str(self.request.user.login_id)
         instance = form.save(commit=False)
         file = instance.file
         instance.name = file.name
         instance.owner = self.request.user
         instance.save()
+        self.request.session['file_name'] = file.name
         fs = FileSystemStorage()
         filename = fs.save(file.name, file)
         uploaded_file_url = fs.url(filename)
@@ -55,9 +57,7 @@ class HomeView(OracleMixin, FormView):
             'file': file.name,
             'user_id': str(self.request.user.login_id),
         }})
-        return render(self.request, self.template_name, data)
-        # return HttpResponse(json.simplejson.dumps(data),
-        #                     mimetype="application/json")
+        return super(HomeView, self).form_valid(form)
 
     def form_invalid(self, form):
         return super(HomeView, self).form_invalid(form)
@@ -70,8 +70,7 @@ class LoginView(FormView):
 
     def form_valid(self, form):
         instance = form.save()
-        if not 'user' in self.request.session:
-            self.request.session['user'] = instance
+        self.request.session['user'] = str(instance.login_id)
         return super(LoginView, self).form_valid(form)
 
 
@@ -85,13 +84,16 @@ class UserView(OracleMixin, TemplateView):
 
     def get_files(self):
         files = []
+        user = Owner.objects.get(login_id=self.request.session['user'])
         for file in File.objects.filter(
-                user=self.request.session['user']).select_related(
-            'owner'):
+                owner=user).select_related('owner'):
             file_object = self.get_object(
-                user=str(self.request.session['user'].login_id),
-                file_name=file.name)
+                user=user.login_id,
+                file_name=file.file.name)
             files.append({'name': file.name,
-                          'upload': file.updated_at,
+                          'upload': file.updated_at.replace(
+                              tzinfo=datetime.timezone.utc).astimezone(
+                              tz=pytz.timezone('US/Eastern')).strftime(
+                              '%Y-%m-%d %I:%M:%S %p'),
                           'download': file_object})
         return files

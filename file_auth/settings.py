@@ -87,12 +87,12 @@ WSGI_APPLICATION = 'file_auth.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'upload',
-        'USER': 'saihemchandra',
-        'PASSWORD': '1234',
-        'HOST': '',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mydatabase',
+        'USER': 'root',
+        'PASSWORD': 'Avinish9!',
+        'HOST': '129.213.25.36',
+        'PORT': '3306',
     }
 }
 # Password validation

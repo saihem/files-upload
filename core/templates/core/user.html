@@ -10,9 +10,13 @@ Here are a list of your files.
     <th>Download</th>
   </thead>
     <tbody>
-    <td></td>
-    <td></td>
-    <td></td>
+    {% for file in files %}
+      <tr>
+      <td>{{ file.name }}</td>
+      <td>{{ file.upload }}</td>
+      <td><a href="/media/{{ file.download }}">{{ file.download }}</a></td>
+      </tr>
+    {% endfor %}
     </tbody>
   </table>
 {% endblock %}
@@ -26,3 +30,4 @@ Here are a list of your files.
     <button type="submit">Upload</button>
   </form>
 {% endblock %}
+

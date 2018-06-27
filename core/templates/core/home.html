@@ -15,6 +15,7 @@
 </head>
 <body>
 {#<h1>OM SAI RAM</h1>#}
+<div class="container">
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
   <a class="navbar-brand" href="{% url "core:home" %}">Home</a>
   <a class="navbar-brand" href="{% url "core:login" %}">Sign In</a>
@@ -22,19 +23,22 @@
     <a class="navbar-brand" href="{% url "core:user" %}">Files</a>
   {% endif %}
 </nav>
-{% block content %}
-  <h3>Upload a file below to Oracle Object Storage! A User ID will be generated, allowing you to access the file.</h3>
-   <form id="file-form" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-  </form>
-{% endblock %}
-{% block success %}
-  {% if success %}
-    New User <b>{{ success.user_id }}</b> has been created with file {{ success.file }}
-  {% endif %}
-{% endblock %}
+  {% block content %}
+    <h3>Upload a file below to Oracle Object Storage!</h3>
+    <form id="file-form" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Upload</button>
+    </form>
+    {% block success %}
+    {% if user %}
+      <p>New User <b>{{ user }}</b> has been created{% if file_name %} with uploaded file {{ file_name }}{% endif %}.</p>
+      <p>Use the generated User ID to login <a href="{% url "core:login" %}">here</a> to
+      gain access to all files you have uploaded.</p>
+    {% endif %}
+  {% endblock %}
+  {% endblock %}
+</div>
 <script src="{% static "core/js/main.js" %}"></script>
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>

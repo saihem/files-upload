@@ -67,10 +67,13 @@ class OracleMixin:
                 self.namespace,
                 self.bucket_name,
                 object_name)
-            self.write_to_file(object, self.get_media_file_path(file_name))
-        except:
+            retrieved_file = 'FROM-ORACLE-' + file_name
+            retrieved_file_path = self.get_media_file_path(retrieved_file)
+            self.write_to_file(object, retrieved_file_path)
+        except Exception as e:
             object = None
-        return object
+            retrieved_file = None
+        return retrieved_file
 
     def upload_object(self, file_properties, user=None):
         self.user = user
