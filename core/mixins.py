@@ -87,7 +87,7 @@ class OracleMixin:
             file_path,
             part_size=part_size,
             progress_callback=self.progress_callback)
-        if response == 200:
+        if response.status == 200:
             os.remove(file_path)
         return response
 

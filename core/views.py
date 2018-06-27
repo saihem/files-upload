@@ -55,7 +55,7 @@ class HomeView(OracleMixin, FormView):
             'file': file.name,
             'user_id': str(self.request.user.login_id),
         }})
-        return render(self.request, self.template_name, json.dumps(data))
+        return render(self.request, self.template_name, data)
         # return HttpResponse(json.simplejson.dumps(data),
         #                     mimetype="application/json")
 
