@@ -1,6 +1,6 @@
 {
   "runtime": {
-    "majorVersion": "3.6.0"
+    "majorVersion": "3.6.1"
   },
   "command": "sh ./start.sh",
   "isClustered": true,
