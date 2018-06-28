@@ -2,7 +2,7 @@
   "runtime": {
     "majorVersion": "3.6.1"
   },
-  "command": "sh ./start.sh",
+  "command": "python3.6 manage.py runserver 0.0.0.0:8080",
   "isClustered": true,
   "release": {
     "version": "1.0"
