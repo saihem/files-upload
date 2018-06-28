@@ -1,3 +1,5 @@
 .env
-*.pyc
-*.pem
+.pyc
+.pem
+__pycache__
+tnv
