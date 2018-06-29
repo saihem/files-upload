@@ -7,4 +7,5 @@ urlpatterns = [
                   path('home/', views.HomeView.as_view(), name='home'),
                   path('login/', views.LoginView.as_view(), name='login'),
                   path('user/', views.UserView.as_view(), name='user'),
+                  path('download/<str:path>/<int:pk>', views.download_file, name='download'),
               ]

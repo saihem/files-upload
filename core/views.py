@@ -1,10 +1,13 @@
 import uuid
 import datetime
+import os
 import pytz
 
 from django.core.files.storage import FileSystemStorage
 from django.urls import reverse_lazy
 from django.views.generic import FormView, TemplateView
+from django.conf import settings
+from django.http.response import HttpResponse, Http404
 
 from .forms import FileForm, OwnerForm
 from .models import Owner, File
@@ -79,21 +82,38 @@ class UserView(OracleMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super(UserView, self).get_context_data(**kwargs)
-        ctx['files'] = self.get_files()
+        user = Owner.objects.get(login_id=self.request.session['user'])
+        ctx['files'] = self.get_files(user)
+        ctx['user_id'] = user.id
         return ctx
 
-    def get_files(self):
+    def get_files(self, user):
         files = []
-        user = Owner.objects.get(login_id=self.request.session['user'])
         for file in File.objects.filter(
                 owner=user).select_related('owner'):
             file_object = self.get_object(
                 user=user.login_id,
                 file_name=file.file.name)
             files.append({'name': file.name,
+                          'path_file_name': file.file.name,
                           'upload': file.updated_at.replace(
                               tzinfo=datetime.timezone.utc).astimezone(
                               tz=pytz.timezone('US/Eastern')).strftime(
                               '%Y-%m-%d %I:%M:%S %p'),
                           'download': file_object})
         return files
+
+
+def download_file(request, path, pk):
+    try:
+        File.objects.get(owner_id=pk)
+    except File.DoesNotExist:
+        raise Http404
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    with open(file_path, 'rb') as fh:
+        response = HttpResponse(fh.read(),
+                                content_type="application/vnd.ms-excel")
+        response[
+            'Content-Disposition'] = 'inline; filename=' + os.path.basename(
+            file_path)
+        return response

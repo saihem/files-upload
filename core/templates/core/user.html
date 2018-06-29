@@ -14,7 +14,7 @@ Here are a list of your files.
       <tr>
       <td>{{ file.name }}</td>
       <td>{{ file.upload }}</td>
-      <td><a href="/media/{{ file.download }}">{{ file.download }}</a></td>
+      <td><a href="{% url 'core:download' path=file.path_file_name  pk=user_id %}">{{ file.download }}</a></td>
       </tr>
     {% endfor %}
     </tbody>
