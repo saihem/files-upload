@@ -90,9 +90,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'mydatabase',
         'USER': 'root',
-        'PASSWORD': 'Avinish9!',
-        'HOST': '129.213.25.36',
-        'PORT': '3306',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
     }
 }
 # Password validation
