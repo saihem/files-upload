@@ -10,7 +10,7 @@ djangorestframework==3.8.2
 idna==2.6
 oci==1.4.3
 pycparser==2.18
-PyJWT==1.5.3
+PyJWT==2.4.0
 pyOpenSSL==17.4.0
 python-dateutil==2.7.3
 pytz==2016.10
